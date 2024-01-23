@@ -154,7 +154,10 @@ class Plugin(object):
 
 	def _get_matching_devices(self, instance, devices):
 		if instance.devices_udev_regex is None:
-			return set(self._device_matcher.match_list(instance.devices_expression, devices))
+			print(f"THIS PATH {instance.devices_expression} XXXXXXXXXX {devices}")
+			ret = set(self._device_matcher.match_list(instance.devices_expression, devices))
+			print(ret)
+			return ret
 		else:
 			udev_devices = self._get_device_objects(devices)
 			if udev_devices is None:
