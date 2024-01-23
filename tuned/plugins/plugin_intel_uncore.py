@@ -28,49 +28,66 @@ class IntelUncorePlugin(hotplug.Plugin):
 	====
 	"""
 
+	def _file2dev(self, dev_dir):
+		if not self._is_tpmi:
+			return dev_dir
+		# TODO use package_id/domain_id to identify device
+		return dev_dir
+
+	def _dev2file(self, dev):
+		if not self._is_tpmi:
+			return dev
+		# TODO use package_id/domain_id to identify device
+		return dev
+
 	def _init_devices(self):
-		log.error("Intel UNCORE INIT")
+		log.info("Intel UNCORE INIT")
 		self._devices_supported = True
 		self._assigned_devices = set()
 		self._free_devices = set()
+		self._is_tpmi = False
 
-		devices = os.listdir(sysfs_dir)
+		try:
+			devices = os.listdir(sysfs_dir)
+		except OSError:
+			return
+
 		print("AAAAAAA", devices)
-
 		# For new TPMI interface use only uncore devices
 		tpmi_devices = fnmatch.filter(devices, 'uncore*')
 		print("BBBBBB", tpmi_devices)
 		if len(tpmi_devices) > 0:
+			self._is_tpmi = True
 			devices = tpmi_devices
 
-		for dev in devices:
-			self._free_devices.add(dev)
+		for d in devices:
+			self._free_devices.add(d)
 
 	def _instance_init(self, instance):
 		instance._has_static_tuning = True
 		instance._has_dynamic_tuning = False
 
 		for device in instance._assigned_devices:
-			log.error("INSTANCE INIT" + sysfs_dir + "%s" % device)
+			log.info("INSTANCE INIT" + sysfs_dir + "%s" % device)
 
 	def _instance_cleanup(self, instance):
 		for device in instance._assigned_devices:
-			log.error("INSTANCE CLEANUP" + sysfs_dir + "%s" % device)
+			log.info("INSTANCE CLEANUP" + sysfs_dir + "%s" % device)
 		pass
 
 	def _device_module_name(self, device):
 		return "intel_uncore_frequency"
 
-	def _get_khz(self, device, file):
-		sysfs_file = sysfs_dir + device + "/" + file
-		khz = cmd.read_file(sysfs_file, no_error=ignore_missing)
+	def _get_khz(self, dev_dir, khz_file):
+		sysfs_file = sysfs_dir + dev_dir + "/" + khz_file
+		khz = cmd.read_file(sysfs_file)
 		if len(khz) > 0:
 			return int(khz)
 		return None
 
-	def _set_khz(self, device, file, khz):
-		sysfs_file = sysfs_dir + device + "/" + file
-		cmd.write_to_file(sysfs_file, "%u" % khz, no_error=ignore_missing)
+	def _set_khz(self, dev_dir, khz_file, khz):
+		sysfs_file = sysfs_dir + dev_dir + "/" + khz_file
+		cmd.write_to_file(sysfs_file, "%u" % khz)
 		return khz
 
 	@classmethod
@@ -91,12 +108,14 @@ class IntelUncorePlugin(hotplug.Plugin):
 			log.error("uncore_max_freq_khz_delta value '%s' is not integer" % value)
 			return None
 
-		# TODO exceptions
-		# TODO make this commont code
-		max_khz = self._get_khz(device, "initial_max_freq_khz")
-		min_khz = self._get_khz(device, "initial_min_freq_khz")
-		freq_khz = max_khz - delta
+		try:
+			max_khz = self._get_khz(device, "initial_max_freq_khz")
+			min_khz = self._get_khz(device, "initial_min_freq_khz")
+		except (OSError, IOError):
+			log.error("fail to read uncore frequency values")
+			return None
 
+		freq_khz = max_khz - delta
 		if freq_khz < min_khz or freq_khz > max_khz:
 			log.error("uncore_max_freq_khz value %d is not in range [%d %d]" % (freq_khz, min_khz, max_khz))
 			return None
@@ -109,8 +128,12 @@ class IntelUncorePlugin(hotplug.Plugin):
 	@command_get("uncore_max_freq_khz_delta")
 	def _get_uncore_max_freq_khz_delta(self, device, ignore_missing=False):
 
-		max_khz = self._get_khz(device, "initial_max_freq_khz")
-		freq_khz = self._get_khz(device, "max_freq_khz")
+		try:
+			max_khz = self._get_khz(device, "initial_max_freq_khz")
+			freq_khz = self._get_khz(device, "max_freq_khz")
+		except (OSError, IOError):
+			log.error("fail to read uncore frequency values")
+			return None
 
 		delta = max_khz - freq_khz
 		print("GET DELTA", device, delta)
