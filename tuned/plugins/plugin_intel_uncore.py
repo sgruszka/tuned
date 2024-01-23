@@ -82,37 +82,6 @@ class IntelUncorePlugin(hotplug.Plugin):
 			# "uncore_max_freq_khz_procent": 0,
 		}
 
-	# @command_set("uncore_max_freq_khz", per_device = True)
-	# def _set_uncore_max_freq_khz(self, value, device, sim):
-	# 	print("SET ", device, value)
-	# 	try:
-	# 		freq_khz = int(value)
-	# 	except ValueError:
-	# 		log.error("uncore_max_freq_khz value '%s' is not integer" % value)
-	# 		return None
-	#
-	# 	# TODO exceptions
-	# 	max_khz = self._get_khz(device, "initial_max_freq_khz")
-	# 	min_khz = self._get_khz(device, "initial_min_freq_khz")
-	#
-	# 	if freq_khz < min_khz or freq_khz > max_khz:
-	# 		log.error("uncore_max_freq_khz value %d is not in range [%d %d]" % (freq_khz, min_khz, max_khz))
-	# 		return None
-	#
-	# 	if sim:
-	# 		return freq_khz
-	#
-	# 	return self._set_khz(device, "max_freq_khz", freq_khz)
-	#
-	# @command_get("uncore_max_freq_khz")
-	# def _get_uncore_max_freq_khz(self, device, ignore_missing=False):
-	# 	file = sysfs_dir + device + "/max_freq_khz"
-	# 	value = cmd.read_file(file, no_error=ignore_missing)
-	# 	print("GET ", device, value)
-	# 	if len(value) > 0:
-	# 		return value
-	# 	return None
-
 	@command_set("uncore_max_freq_khz_delta", per_device = True)
 	def _set_uncore_max_freq_khz_delta(self, value, device, sim):
 		print("SET DELTA ", device, value)
